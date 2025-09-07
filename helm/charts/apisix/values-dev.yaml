@@ -1,0 +1,154 @@
+# Custom Values for APISIX Development Environment
+# This file overrides the default Bitnami APISIX chart values for our minimal setup
+
+## @section Global parameters
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+## @section APISIX Data Plane parameters
+dataPlane:
+  ## @param dataPlane.replicaCount Number of APISIX Data Plane replicas to deploy
+  replicaCount: 1
+
+  ## Resource requests and limits for APISIX Data Plane
+  ## @param dataPlane.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if dataPlane.resources is set (dataPlane.resources is recommended for production).
+  ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
+  ##
+  resourcesPreset: "micro"
+  ## @param dataPlane.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
+  ## Example:
+  ## resources:
+  ##   requests:
+  ##     cpu: 100m
+  ##     memory: 128Mi
+  ##   limits:
+  ##     cpu: 250m
+  ##     memory: 256Mi
+  ##
+  resources: {}
+
+  ## @section APISIX Data Plane Traffic Exposure Parameters
+  service:
+    ## @param dataPlane.service.type APISIX Data Plane service type
+    type: LoadBalancer
+    
+    ## Service ports
+    ports:
+      http: 80
+      https: 443
+      metrics: 8080
+    
+    ## @param dataPlane.service.loadBalancerIP APISIX Data Plane service Load Balancer IP
+    ## Use the static IP created by Terraform
+    loadBalancerIP: ""  # Will be set dynamically by our deployment script
+    
+    ## @param dataPlane.service.annotations Additional custom annotations for APISIX Data Plane service
+    annotations:
+      # Google Cloud Load Balancer annotations
+      cloud.google.com/load-balancer-type: "External"
+
+  ## @param dataPlane.networkPolicy.enabled Specifies whether a NetworkPolicy should be created
+  networkPolicy:
+    enabled: false  # Disable for development simplicity
+
+## @section APISIX Control Plane parameters
+controlPlane:
+  ## @param controlPlane.enabled Enable APISIX Control Plane
+  enabled: true
+  
+  ## @param controlPlane.replicaCount Number of APISIX Control Plane replicas to deploy
+  replicaCount: 1
+
+  ## Resource configuration for control plane
+  resourcesPreset: "micro"
+  resources: {}
+
+  ## Service configuration for control plane (Admin API)
+  service:
+    ## @param controlPlane.service.type APISIX Control Plane service type
+    type: ClusterIP  # Keep admin API internal
+    
+    ## @param controlPlane.service.ports.http APISIX Control Plane service HTTP port
+    ports:
+      http: 9180
+
+## @section APISIX Ingress Controller parameters
+ingressController:
+  ## @param ingressController.enabled Enable APISIX Ingress Controller
+  enabled: false  # Disable for minimal setup
+
+## @section etcd parameters
+## External etcd configuration (APISIX's data store)
+etcd:
+  ## @param etcd.enabled Deploy etcd as part of the chart
+  enabled: true
+  
+  ## @param etcd.replicaCount Number of etcd replicas
+  replicaCount: 1
+  
+  ## Resource configuration for etcd
+  resourcesPreset: "micro"
+  resources: {}
+  
+  ## Persistence configuration
+  persistence:
+    ## @param etcd.persistence.enabled Enable etcd data persistence using PVC
+    enabled: true
+    ## @param etcd.persistence.size PVC Storage Request for etcd data volume
+    size: 8Gi
+    ## @param etcd.persistence.storageClass PVC Storage Class for etcd data volume
+    storageClass: ""  # Use default storage class
+
+## @section Dashboard parameters
+dashboard:
+  ## @param dashboard.enabled Enable APISIX Dashboard
+  enabled: true
+  
+  ## @param dashboard.replicaCount Number of APISIX Dashboard replicas to deploy
+  replicaCount: 1
+  
+  ## Resource configuration for dashboard
+  resourcesPreset: "micro"
+  resources: {}
+  
+  ## Service configuration for dashboard
+  service:
+    ## @param dashboard.service.type APISIX Dashboard service type
+    type: ClusterIP  # Keep dashboard internal for security
+    
+    ## @param dashboard.service.ports.http APISIX Dashboard service HTTP port
+    ports:
+      http: 9000
+
+## @section Common parameters
+## @param commonLabels Labels to add to all deployed objects
+commonLabels:
+  app.kubernetes.io/part-of: "gateway-iam-solution"
+  environment: "dev"
+
+## @param commonAnnotations Annotations to add to all deployed objects
+commonAnnotations:
+  managed-by: "terraform-helm"
+
+## @section Security Context
+## Configure Pods Security Context for all components
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+##
+podSecurityContext:
+  enabled: true
+  fsGroup: 1001
+
+## Configure Container Security Context for all components
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
+##
+containerSecurityContext:
+  enabled: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
